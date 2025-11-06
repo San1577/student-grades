@@ -1,0 +1,75 @@
+const express = require('express');
+const mysql = require('mysql2');
+const cors = require('cors');
+require('dotenv').config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// Kết nối database
+const db = mysql.createConnection({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME
+});
+
+db.connect((err) => {
+    if (err) {
+        console.error('❌ Database connection failed:', err);
+        return;
+    }
+    console.log('✅ Connected to database');
+});
+
+// API 1: Lấy tất cả điểm
+app.get('/api/grades', (req, res) => {
+    const query = 'SELECT * FROM grades ORDER BY created_at DESC';
+    db.query(query, (err, results) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(results);
+    });
+});
+
+// API 2: Thêm điểm mới
+app.post('/api/grades', (req, res) => {
+    const { student_name, subject, grade } = req.body;
+    const query = 'INSERT INTO grades (student_name, subject, grade) VALUES (?, ?, ?)';
+    
+    db.query(query, [student_name, subject, grade], (err, result) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json({ message: 'Grade added successfully', id: result.insertId });
+    });
+});
+
+// API 3: Thống kê
+app.get('/api/stats', (req, res) => {
+    const query = `
+        SELECT 
+            COUNT(*) as total_records,
+            AVG(grade) as average_grade,
+            MAX(grade) as highest_grade,
+            MIN(grade) as lowest_grade
+        FROM grades
+    `;
+    
+    db.query(query, (err, results) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+            return;
+        }
+        res.json(results[0]);
+    });
+});
+
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+});

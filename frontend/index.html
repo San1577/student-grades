@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Grades Manager</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            color: #333;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: bold;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Student Grades Manager</h1>
+
+        <!-- Statistics Section -->
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total Records</div>
+                <div class="stat-value" id="totalRecords">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Average Grade</div>
+                <div class="stat-value" id="averageGrade">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Highest Grade</div>
+                <div class="stat-value" id="highestGrade">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Lowest Grade</div>
+                <div class="stat-value" id="lowestGrade">-</div>
+            </div>
+        </div>
+
+        <!-- Add Grade Form -->
+        <div class="form-section">
+            <h2>Add New Grade</h2>
+            <div class="success-message" id="successMessage">✅ Grade added successfully!</div>
+            
+            <form id="gradeForm">
+                <div class="form-group">
+                    <label>Student Name:</label>
+                    <input type="text" id="studentName" placeholder="Enter student name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Subject:</label>
+                    <select id="subject" required>
+                        <option value="">Select Subject</option>
+                        <option value="Math">Math</option>
+                        <option value="English">English</option>
+                        <option value="Physics">Physics</option>
+                        <option value="Chemistry">Chemistry</option>
+                        <option value="Computer Science">Computer Science</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Grade (0-10):</label>
+                    <input type="number" id="grade" min="0" max="10" step="0.1" placeholder="Enter grade" required>
+                </div>
+                
+                <button type="submit">Add Grade</button>
+            </form>
+        </div>
+
+        <!-- Grades Table -->
+        <h2>All Grades</h2>
+        <div id="gradesContainer">
+            <div class="loading">Loading data...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3001/api';
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_URL}/stats`);
+                const stats = await response.json();
+                
+                document.getElementById('totalRecords').textContent = stats.total_records;
+                document.getElementById('averageGrade').textContent = stats.average_grade ? stats.average_grade.toFixed(2) : '-';
+                document.getElementById('highestGrade').textContent = stats.highest_grade || '-';
+                document.getElementById('lowestGrade').textContent = stats.lowest_grade || '-';
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load all grades
+        async function loadGrades() {
+            try {
+                const response = await fetch(`${API_URL}/grades`);
+                const grades = await response.json();
+                
+                const container = document.getElementById('gradesContainer');
+                
+                if (grades.length === 0) {
+                    container.innerHTML = '<p class="loading">No grades found</p>';
+                    return;
+                }
+                
+                let tableHTML = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Student Name</th>
+                                <th>Subject</th>
+                                <th>Grade</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                grades.forEach(grade => {
+                    const date = new Date(grade.created_at).toLocaleDateString('vi-VN');
+                    tableHTML += `
+                        <tr>
+                            <td>${grade.id}</td>
+                            <td>${grade.student_name}</td>
+                            <td>${grade.subject}</td>
+                            <td><strong>${grade.grade}</strong></td>
+                            <td>${date}</td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += '</tbody></table>';
+                container.innerHTML = tableHTML;
+                
+            } catch (error) {
+                console.error('Error loading grades:', error);
+                document.getElementById('gradesContainer').innerHTML = 
+                    '<div class="error-message">❌ Cannot connect to server. Make sure backend is running on port 3001!</div>';
+            }
+        }
+
+        // Add new grade
+        document.getElementById('gradeForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const data = {
+                student_name: document.getElementById('studentName').value,
+                subject: document.getElementById('subject').value,
+                grade: parseFloat(document.getElementById('grade').value)
+            };
+            
+            try {
+                const response = await fetch(`${API_URL}/grades`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    // Show success message
+                    const successMsg = document.getElementById('successMessage');
+                    successMsg.style.display = 'block';
+                    setTimeout(() => {
+                        successMsg.style.display = 'none';
+                    }, 3000);
+                    
+                    // Reset form
+                    document.getElementById('gradeForm').reset();
+                    
+                    // Reload data
+                    loadGrades();
+                    loadStats();
+                }
+            } catch (error) {
+                console.error('Error adding grade:', error);
+                alert('❌ Error adding grade!');
+            }
+        });
+
+        // Load data when page loads
+        window.onload = () => {
+            loadStats();
+            loadGrades();
+        };
+
+        // Auto refresh every 30 seconds
+        setInterval(() => {
+            loadStats();
+            loadGrades();
+        }, 30000);
+    </script>
+</body>
+</html>
